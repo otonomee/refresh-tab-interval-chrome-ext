@@ -1,0 +1,1 @@
+Refreshes tab at specified interval for either current URL or specified list of URLs

@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Random Refresh",
+  "version": "1.0",
+  "description": "Refreshes the current webpage randomly every 2-5 minutes and randomly from a list of URLs.",
+  "action": {
+    "default_icon": {
+        "16": "icon.png",
+        "48": "icon.png",
+        "128": "icon.png"
+    },
+    
+    "default_title": "Random Refresh",
+    "default_popup": "popup.html"
+},
+"icons": {
+  "16": "icon.png",
+  "32": "icon.png",
+  "48": "icon.png",
+  "128": "icon.png"
+  },
+  "permissions": [
+    "tabs",
+    "storage"
+  ],
+  "background": {
+    
+    "service_worker": "service-worker.js"
+}
+
+}
