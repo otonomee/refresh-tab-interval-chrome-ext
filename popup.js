@@ -1,79 +1,48 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const minIntervalInput = document.getElementById('minInterval');
-  const maxIntervalInput = document.getElementById('maxInterval');
-  const urlListTextarea = document.getElementById('urlList');
-  const saveBtn = document.getElementById('saveBtn');
-  const saveNotification = document.getElementById('saveNotification');
-  const countdown = document.getElementById('countdown');
-  const nextUrl = document.getElementById('nextUrl');
-  const startBtn = document.getElementById('startBtn');
-  const stopBtn = document.getElementById('stopBtn');
+document.addEventListener("DOMContentLoaded", () => {
+  try {
+    let startButton = document.getElementById('start');
+    let stopButton = document.getElementById('stop');
+    let urlsTextarea = document.getElementById('urls');
+    let minTimeInput = document.getElementById('minTime');
+    let maxTimeInput = document.getElementById('maxTime');
+    let intervalDuration = document.getElementById('interval-duration');
+    let isRefreshing = false;
 
-  // Load and display the saved settings
-  chrome.storage.sync.get(['minInterval', 'maxInterval', 'urlList'], (data) => {
-    minIntervalInput.value = data.minInterval || '';
-    maxIntervalInput.value = data.maxInterval || '';
-    urlListTextarea.value = data.urlList || '';
-  });
+    startButton.addEventListener('click', () => {
+      let urls = urlsTextarea.value.trim().split('\n');
+      let minTime = parseInt(minTimeInput.value);
+      let maxTime = parseInt(maxTimeInput.value);
 
-  // Save the settings
-  saveBtn.addEventListener('click', () => {
-    chrome.storage.sync.set({
-      minInterval: minIntervalInput.value,
-      maxInterval: maxIntervalInput.value,
-      urlList: urlListTextarea.value,
-    }, () => {
-      saveNotification.style.display = 'block';
-      setTimeout(() => {
-        saveNotification.style.display = 'none';
-      }, 2000);
+      chrome.runtime.sendMessage({
+        command: 'start',
+        urls: urls,
+        minTime: minTime,
+        maxTime: maxTime
+      });
+
+      isRefreshing = true;
     });
-  });
 
-  let countdownTimeout;
+    stopButton.addEventListener('click', () => {
+      chrome.runtime.sendMessage({
+        command: 'stop'
+      });
 
-  // Start refreshing
-  startBtn.addEventListener('click', () => {
-    chrome.runtime.sendMessage({
-      action: 'startRefreshing'
+      isRefreshing = false;
     });
-    // updateCountdown();
-  });
 
-  // Stop refreshing
-  stopBtn.addEventListener('click', () => {
-    clearTimeout(countdownTimeout);
-    countdown.textContent = 'Refreshing stopped';
-    nextUrl.textContent = '';
-    chrome.runtime.sendMessage({
-      action: 'stopRefreshing'
-    });
-  });
-  // Listen for countdown updates from background.js
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'updateCountdown') {
-      let remainingSeconds = Math.round(message.timeLeft);
-      countdown.textContent = `Next refresh in ${remainingSeconds} seconds`;
-      nextUrl.textContent = `Next URL: ${message.nextUrl}`;
-
-      // Clear any existing countdown interval
-      if (typeof countdownInterval !== 'undefined') {
-        clearInterval(countdownInterval)
-      }
-      //clearInterval(countdownInterval);
-
-      // Start a new countdown interval
-      countdownInterval = setInterval(() => {
-        if (remainingSeconds > 0) {
-          countdown.textContent = `Next refresh in ${remainingSeconds} seconds`;
-          remainingSeconds--;
-        } else {
-          countdown.textContent = 'Refreshing...';
-          clearInterval(countdownInterval);
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.command === 'refreshed') {
+        if (isRefreshing) {
+          chrome.runtime.sendMessage({
+            command: 'refresh'
+          });
         }
-      }, 1000);
-    }
-    sendResponse()
-  });
-
-});
+      } else if (message.msg == 'sendInterval') {
+        intervalDuration.textContent = message.duration;
+      }
+    });
+  } catch (e) {
+    console.log(e)
+  }
+})

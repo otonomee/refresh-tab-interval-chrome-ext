@@ -2,68 +2,65 @@
 <html>
 
 <head>
+  <title>Refresher</title>
+  <script src="popup.js"></script>
   <link rel="stylesheet" href="lib/bootstrap.min.css">
   <style>
     body {
-      width: 400px;
+      font-size: 12px;
+    }
+
+    .container {
+      max-width: 360px;
       margin: 0 auto;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background-color: #efefef;
+      padding: 1rem;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+      border-radius: 5px;
     }
 
-    button {
-      margin-top: 10px;
-      margin-top: 10px;
-      box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.25);
-
+    .form-control-sm {
+      height: calc(1.5em + 0.5rem + 2px);
+      font-size: 0.875rem;
     }
 
-    input {
-      box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.25);
+    .btn-sm {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.875rem;
+      line-height: 1.5;
+      border-radius: 0.2rem;
+      width: 45%;
     }
 
     textarea {
-      box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.25);
+      font-size: 12px !important;
+      height: 75px !important;
     }
   </style>
 </head>
 
 <body>
   <div class="container">
-    <h1 style="margin-top:20px;">Random Refresh</h1>
-    <div class=" row mb-3">
-      <div class="col">
-        <label for="minInterval" class="form-label">Min Interval (seconds):</label>
-        <input type="number" class="form-control" id="minInterval">
-      </div>
-      <div class="col">
-        <label for="maxInterval" class="form-label">Max Interval (seconds):</label>
-        <input type="number" class="form-control" id="maxInterval">
-      </div>
-    </div>
+    <h2 class="mb-3">Enter URLs to Refresh</h2>
     <div class="mb-3">
-      <label for="urlList" class="form-label">URLs:</label>
-      <textarea class="form-control" id="urlList" rows="4"></textarea>
+      <label for="urls" class="form-label">URLs:</label>
+      <textarea class="form-control form-control-sm" id="urls" rows="2"></textarea>
     </div>
-    <div class="mb-3">
-      <button id="saveBtn" class="btn btn-primary">Save</button>
-      <p id="saveNotification" style="display:none;">Settings saved!</p>
-    </div>
-    <div class="row mb-3">
-      <div class="col">
-        <button id="startBtn" class="btn btn-success">Start Refreshing</button>
+    <div class="mb-3 row">
+      <div class="col-sm-6" style="width:50% !important">
+        <label for="minTime" class="form-label">Minimum Time (in seconds):</label>
+        <input type="number" class="form-control form-control-sm" id="minTime">
       </div>
-      <div class="col">
-        <button id="stopBtn" class="btn btn-danger">Stop Refreshing</button>
+      <div class="col-sm-6" style="width:50% !important">
+        <label for="maxTime" class="form-label">Maximum Time (in seconds):</label>
+        <input type="number" class="form-control form-control-sm" id="maxTime">
       </div>
     </div>
-    <div class="mb-3">
-      <p id="countdown"></p>
-      <p id="nextUrl"></p>
+    <p class="mb-3">Interval duration: <span id="interval-duration">--</span></p>
+    <div class="gap-2">
+      <button id="start" class="btn btn-primary btn-sm">Start</button>
+      <button id="stop" class="btn btn-danger btn-sm" style="float:right">Stop</button>
     </div>
   </div>
-  <script src="popup.js"></script>
   <script src="lib/bootstrap.bundle.min.js"></script>
 </body>
 

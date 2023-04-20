@@ -1,96 +1,120 @@
-  let minInterval;
-  let maxInterval;
-  let urlList;
-  let timeoutIds = [];
-  let activeTabIds = [];
+let intervalId;
+let urls = [];
+let currentTabId;
+let previousUrl = '';
+let lastUrlIndex = -1;
+let currentUrlIndex = -1;
+let newerIntervalDuration;
 
-  // Load the settings
-  chrome.storage.sync.get(['minInterval', 'maxInterval', 'urlList'], (data) => {
-    minInterval = parseInt(data.minInterval, 10);
-    maxInterval = parseInt(data.maxInterval, 10);
-    urlList = processUrlList(data.urlList.split('\n'));
+chrome.action.onClicked.addListener(() => {
+    chrome.windows.create({
+        url: 'popup.html',
+        width: 325,
+        height: 375,
+        left: 1250,
+        top: 150,
+        type: 'popup'
+    })
+})
 
-    // Refresh function
-    function refresh(tabId) {
-      let nextUrl = urlList.length > 0 ? urlList[Math.floor(Math.random() * urlList.length)] : '';
-      chrome.tabs.get(tabId, (tab) => {
-        if (tab) {
-          const currentTabId = tab.id;
-          if (nextUrl.length == 1) {
-            nextUrl = tab.url; // Set current tab URL if no URL is available in urlList
-          }
-          chrome.storage.sync.set({
-            'nextUrl': nextUrl
-          });
-          chrome.tabs.update(currentTabId, {
-            url: nextUrl
-          });
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    switch (message.command) {
+        case 'start':
+            startRefresh(message.urls, message.minTime, message.maxTime);
+            break;
+        case 'stop':
+            stopRefresh();
+            break;
+        case 'refresh':
+            refreshTab();
+            break;
+        default:
+            console.error('Invalid command: ' + message.command);
+            break;
+    }
+});
+
+function startRefresh(newUrls, minTime, maxTime) {
+    urls = newUrls;
+    currentTabId = null;
+
+    chrome.tabs.query({
+        active: true
+    }, (tabs) => {
+        if (tabs.length > 0) {
+            currentTabId = tabs[0].id;
+            activeTabIds.push(tabs[0].id);
+            tabs.array.forEach(element => {
+                refreshTab(currentTabId)
+            });
+            refreshTab();
         }
-        scheduleRefresh(tabId);
-      });
-    }
-
-    // Schedule the next refresh
-    function scheduleRefresh(tabId) {
-      if (!activeTabIds.includes(tabId)) {
-        return;
-      }
-
-      const interval = Math.floor(Math.random() * (maxInterval - minInterval + 1) + minInterval) * 1000;
-      const timeoutId = setTimeout(() => refresh(tabId), interval);
-      timeoutIds[tabId] = timeoutId;
-
-      // Send a countdown update to the popup
-      chrome.runtime.sendMessage({
-        action: 'updateCountdown',
-        timeLeft: interval / 1000,
-        nextUrl: urlList[Math.floor(Math.random() * urlList.length)],
-      });
-    }
-
-    // Handle messages from the popup
-    chrome.runtime.onMessage.addListener((message) => {
-      if (message.action === 'startRefreshing') {
-        console.log(urlList[Math.floor(Math.random() * urlList.length)])
-        chrome.tabs.query({
-          active: true,
-          currentWindow: true
-        }, (tabs) => {
-          tabs.forEach((tab) => {
-            const tabId = tab.id;
-            activeTabIds.push(tabId);
-            scheduleRefresh(tabId);
-          });
-        });
-      } else if (message.action === 'stopRefreshing') {
-        activeTabIds.forEach((tabId) => {
-          clearTimeout(timeoutIds[tabId]);
-        });
-        activeTabIds = [];
-        timeoutIds = [];
-      }
     });
 
-    // Update the settings when they are changed
-    chrome.storage.onChanged.addListener((changes) => {
-      if (changes.minInterval) {
-        minInterval = parseInt(changes.minInterval.newValue, 10);
-      }
-      if (changes.maxInterval) {
-        maxInterval = parseInt(changes.maxInterval.newValue, 10);
-      }
-      if (changes.urlList) {
-        urlList = processUrlList(changes.urlList.newValue.split('\n'));
-      }
-    });
+    const intervalDuration = getRandomInt(minTime * 1000, maxTime * 1000) / 1000;
+    chrome.runtime.sendMessage({
+        msg: 'sendInterval',
+        duration: intervalDuration
+    })
+    intervalId = setInterval(() => {
+        const newerIntervalDuration = getRandomInt(minTime * 1000, maxTime * 1000) / 1000;
+        chrome.runtime.sendMessage({
+            msg: 'sendInterval',
+            duration: newerIntervalDuration
+        });
+        refreshTab();
+    }, intervalDuration * 1000);
+}
 
-    function processUrlList(urlList) {
-      return urlList.map((url) => {
-        if (!/^https?:\/\//i.test(url)) {
-          return 'http://' + url;
-        }
-        return url;
-      });
+function stopRefresh() {
+    clearInterval(intervalId);
+}
+
+function refreshTab() {
+    if (currentTabId !== null) {
+        getCurrentTabUrl((currentUrl) => {
+            currentUrlIndex = urls.indexOf(currentUrl);
+            let newUrlIndex = getNextUrlIndex();
+            let newUrl = urls[newUrlIndex];
+            while (newUrl === previousUrl) {
+                newUrlIndex = getNextUrlIndex();
+                newUrl = urls[newUrlIndex];
+            }
+            previousUrl = newUrl;
+            chrome.tabs.update(currentTabId, {
+                url: newUrl
+            });
+            newerIntervalDuration = getRandomInt(minTimeInput.value * 1000, maxTimeInput.value * 1000) / 1000;
+            chrome.runtime.sendMessage({
+                msg: 'sendInterval',
+                duration: newerIntervalDuration
+            });
+        });
     }
+}
 
-  });
+function getNextUrlIndex() {
+    let newIndex;
+    do {
+        newIndex = Math.floor(Math.random() * urls.length);
+    } while (newIndex === currentUrlIndex);
+
+    lastUrlIndex = currentUrlIndex;
+    currentUrlIndex = newIndex;
+
+    return newIndex;
+}
+
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getCurrentTabUrl(callback) {
+    if (currentTabId !== null) {
+        chrome.tabs.get(currentTabId, (tab) => {
+            callback(tab.url || '');
+        });
+    } else {
+        callback('');
+    }
+}
